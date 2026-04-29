@@ -1,0 +1,12 @@
+[package]
+name = "rustyquarium"
+version = "2.2.0"
+edition = "2021"
+
+[[bin]]
+name = "rustyquarium"
+path = "src/main.rs"
+
+[dependencies]
+crossterm = "0.28"
+rand = "0.8"
