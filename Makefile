@@ -2,22 +2,20 @@
 # Aquarium game - Rust port
 #
 PROG    = rustyquarium
-DESTDIR = $(HOME)/.local
 
-.PHONY: all install uninstall clean test
+.PHONY: all install run clean test
 
 all:
-	cargo build --release
+	cargo build
 
-install: all
-	@install -d $(DESTDIR)/usr/bin
-	install -m 555 target/release/$(PROG) $(DESTDIR)/bin/$(PROG)
-
-uninstall:
-	rm -f $(DESTDIR)/usr/bin/$(PROG)
+install:
+	cargo install --path .
 
 clean:
 	cargo clean
+
+run:
+	cargo run
 
 test:
 	cargo test

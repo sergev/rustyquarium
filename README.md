@@ -22,7 +22,7 @@ which is itself a Go rewrite of the classic asciiquarium.
 ## Install
 
 ```bash
-cargo install --path .
+make install
 ```
 
 The binary is installed to `$HOME/.cargo/bin/rustyquarium`.
@@ -49,29 +49,20 @@ rustyquarium --classic
 Build (debug):
 
 ```bash
-cargo build
-```
-
-Build (release):
-
-```bash
 make
 ```
 
-Run:
+Run tests:
 
 ```bash
-./target/debug/rustyquarium
+make test
 ```
 
-Install, uninstall:
+Run the game:
 
 ```bash
-make install
-make uninstall
+make run
 ```
-
-By default, `make install` installs to `$HOME/.local/usr/bin/rustyquarium`.
 
 ## Documentation
 

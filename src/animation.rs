@@ -141,6 +141,7 @@ impl Animation {
         let default_col = color_by_name(&e.default_color);
         let auto_trans  = e.auto_trans;
         let transparent = e.transparent;
+        let draw_up     = e.entity_type == "fishline";
         let sw = self.width as i32;
         let sh = self.height as i32;
         drop(e); // release borrow before touching stdout
@@ -149,7 +150,7 @@ impl Animation {
         let color_lines: Vec<&str> = color_mask.split('\n').collect();
 
         for (li, line) in lines.iter().enumerate() {
-            let draw_y = ey + li as i32;
+            let draw_y = if draw_up { ey - li as i32 } else { ey + li as i32 };
             if draw_y < 0 || draw_y >= sh { continue; }
 
             let color_chars: Vec<char> = if li < color_lines.len() {
@@ -249,12 +250,16 @@ impl Animation {
     }
 
     /// Runs one full simulation step and then draws the frame.
-    /// We take entity slices before loops so callbacks can add/remove safely.
+    /// We iterate a stable snapshot so callbacks can add/remove safely.
     /// Pass order is: update → collisions → death cleanup → render.
     fn animate(&mut self) {
-        // Movement pass: take entities out so callbacks can call add_entity safely.
-        let mut entities = std::mem::take(&mut self.entities);
-        for eref in entities.clone() {
+        // Movement pass: iterate a snapshot, but keep self.entities queryable so
+        // collision handlers can look up related entities by type.
+        let snapshot = self.entities.clone();
+        for eref in snapshot {
+            if !self.entities.iter().any(|e| std::rc::Rc::ptr_eq(e, &eref)) {
+                continue;
+            }
             let cb = eref.borrow().callback;
             match cb {
                 Some(f) => f(eref.clone(), self),
@@ -270,10 +275,6 @@ impl Animation {
                 handler(eref.clone(), self);
             }
         }
-        // Merge newly spawned entities from callbacks.
-        let spawned = std::mem::take(&mut self.entities);
-        entities.extend(spawned);
-        self.entities = entities;
 
         self.check_collisions();
 
@@ -440,7 +441,7 @@ fn info_color_for(line_idx: usize, line: &str, ch: char) -> Color {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entity::{Entity, EntityOptions};
+    use crate::entity::{CallbackArgs, Entity, EntityOptions};
 
     fn make_anim() -> Animation {
         let mut a = Animation::new();
@@ -602,5 +603,66 @@ mod tests {
         let want_seaweed = a.width / 15;
         assert_eq!(a.get_entities_by_type("seaweed").len(), want_seaweed,
             "expected {} seaweed entities after reflow", want_seaweed);
+    }
+
+    #[test]
+    fn test_hook_collision_retracts_hook_and_line_during_animate() {
+        let mut a = make_anim();
+
+        let fish = Entity::new(EntityOptions {
+            entity_type:  "fish".into(),
+            shape:        vec!["<><".into()],
+            position:     [20, 20, crate::depth::DEPTH_FISH_START],
+            physical:     true,
+            coll_handler: Some(crate::fish::fish_collision),
+            ..Default::default()
+        });
+        let hook_point = Entity::new(EntityOptions {
+            entity_type: "hook_point".into(),
+            shape:       vec![".".into()],
+            position:    [20, 20, crate::depth::DEPTH_SHARK + 1],
+            physical:    true,
+            ..Default::default()
+        });
+        let fishhook = Entity::new(EntityOptions {
+            entity_type:   "fishhook".into(),
+            shape:         vec!["J".into()],
+            position:      [20, 20, crate::depth::DEPTH_WATER_LINE1],
+            callback_args: Some(CallbackArgs::State({
+                let mut m = std::collections::HashMap::new();
+                m.insert("mode".into(), "lowering".into());
+                m
+            })),
+            ..Default::default()
+        });
+        let fishline = Entity::new(EntityOptions {
+            entity_type:   "fishline".into(),
+            shape:         vec!["|".into()],
+            position:      [21, 20, crate::depth::DEPTH_WATER_LINE1],
+            callback_args: Some(CallbackArgs::State({
+                let mut m = std::collections::HashMap::new();
+                m.insert("mode".into(), "lowering".into());
+                m
+            })),
+            ..Default::default()
+        });
+
+        a.entities = vec![fish.clone(), hook_point.clone(), fishhook.clone(), fishline.clone()];
+        a.check_collisions();
+        a.animate();
+
+        for (name, e) in [("fish", fish), ("fishhook", fishhook), ("fishline", fishline)] {
+            let b = e.borrow();
+            if let CallbackArgs::State(ref m) = b.callback_args {
+                assert_eq!(
+                    m.get("mode").map(String::as_str),
+                    Some("hooked"),
+                    "{} should switch to hooked mode after hook_point collision",
+                    name
+                );
+            } else {
+                panic!("{} should use State callback args after retract", name);
+            }
+        }
     }
 }

@@ -363,10 +363,8 @@ pub fn add_fishhook(_dead: Option<EntityRef>, anim: &mut Animation) {
     let mut rng = rand::thread_rng();
     let x       = 10 + rng.gen_range(0..(anim.width() as i32 - 30).max(1));
     let y_start = -20i32;
-    let y_line  = y_start - 50;
-    let line_shape = "|".repeat(1); // placeholder; built below
-    let _ = line_shape;
-    let line_str: String = "|\n".repeat(50) + &" \n".repeat(6);
+    let y_line  = y_start - 1;
+    let line_str: String = "|\n".repeat(50);
 
     anim.new_entity(EntityOptions {
         entity_type:    "fishline".into(),
@@ -386,7 +384,8 @@ pub fn add_fishhook(_dead: Option<EntityRef>, anim: &mut Animation) {
         shape:          vec!["       o\n      ||\n      ||\n/ \\   ||\n  \\__//\n  `--'".into()],
         position:       [x, y_start, DEPTH_WATER_LINE1],
         auto_trans:     true,
-        die_offscreen:  true,
+        // Spawn above the viewport, so offscreen death must stay disabled while lowering.
+        die_offscreen:  false,
         default_color:  "GREEN".into(),
         callback:       Some(fishhook_callback),
         callback_args:  Some(CallbackArgs::State({
@@ -456,6 +455,10 @@ pub fn retract(entity: EntityRef, _anim: &mut Animation) {
             m
         });
     } else {
+        if e.entity_type == "fishhook" {
+            // Only the visible hook should die when it retracts offscreen.
+            e.die_offscreen = true;
+        }
         e.callback_args = CallbackArgs::State({
             let mut m = std::collections::HashMap::new();
             m.insert("mode".into(), "hooked".into());
@@ -819,10 +822,14 @@ mod tests {
         add_fishhook(None, &mut a);
 
         let hook = a.get_entities_by_type("fishhook")[0].clone();
+        assert!(!hook.borrow().die_offscreen,
+            "fishhook should not die offscreen while lowering");
         retract(hook.clone(), &mut a);
 
         let b = hook.borrow();
         assert!(!b.physical, "retracted entity must not be physical");
+        assert!(b.die_offscreen,
+            "fishhook should die offscreen after switching to hooked mode");
         if let CallbackArgs::State(ref m) = b.callback_args {
             assert_eq!(m.get("mode").map(String::as_str), Some("hooked"),
                 "retract must switch mode to 'hooked'");
