@@ -2,7 +2,7 @@ use rand::Rng;
 
 use crate::animation::Animation;
 use crate::depth::*;
-use crate::entity::{CallbackArgs, EntityOptions, EntityRef};
+use crate::entity::{CallbackArgs, Entity, EntityOptions, EntityRef};
 
 // ── Shark ─────────────────────────────────────────────────────────────────────
 
@@ -568,6 +568,29 @@ pub fn add_ducks(_dead: Option<EntityRef>, anim: &mut Animation) {
 
 // ── Dolphins ──────────────────────────────────────────────────────────────────
 
+/// Moves dolphins using standard `Move` logic, then enables offscreen cleanup once
+/// the sprite intersects the viewport. Followers intentionally spawn fully offscreen
+/// behind the lead; without this delay they would be culled before entering (same
+/// idea as fishhook spawning above the tank with `die_offscreen: false` until safe).
+fn dolphin_callback(entity: EntityRef, anim: &mut Animation) {
+    Entity::move_entity(entity.clone(), anim);
+    let mut e = entity.borrow_mut();
+    if e.die_offscreen {
+        return;
+    }
+    let x = e.x as i32;
+    let y = e.y as i32;
+    let w = e.width as i32;
+    let h = e.height as i32;
+    let sw = anim.width() as i32;
+    let sh = anim.height() as i32;
+    let intersects =
+        x + w > 0 && x < sw && y + h > 0 && y < sh;
+    if intersects {
+        e.die_offscreen = true;
+    }
+}
+
 /// Spawns three dolphins with fixed spacing.
 /// Only the lead dolphin has a death callback to avoid triple respawns.
 /// Followers are visual companions in the same formation.
@@ -598,7 +621,7 @@ pub fn add_dolphins(_dead: Option<EntityRef>, anim: &mut Animation) {
     let dist_sign = if dir == 0 { distance } else { -distance };
 
     for i in 0..3usize {
-        let default_color = if i < 2 { "BLUE" } else { "CYAN" };
+        let default_color = if i == 0 { "BLUE" } else if i == 1 { "MAGENTA" } else { "CYAN" };
         let death_cb: Option<crate::entity::DeathCallback> = if i == 0 {
             Some(Box::new(|_, a| random_object(None, a)))
         } else {
@@ -609,9 +632,10 @@ pub fn add_dolphins(_dead: Option<EntityRef>, anim: &mut Animation) {
             color: vec![colors[dir].into()],
             auto_trans: true,
             position: [x - dist_sign * (2 - i as i32), 5, DEPTH_WATER_GAP3],
+            callback: Some(dolphin_callback),
             callback_args: Some(CallbackArgs::Move(vec![speed, 0.0, 0.0, 0.5])),
             death_callback: death_cb,
-            die_offscreen: true,
+            die_offscreen: false,
             default_color: default_color.into(),
             ..Default::default()
         });
@@ -679,6 +703,7 @@ mod tests {
     use crate::entity::CallbackArgs;
     use std::collections::HashSet;
     use std::rc::Rc;
+    use std::time::Instant;
 
     fn make_anim() -> Animation {
         let mut a = Animation::new();
@@ -907,6 +932,55 @@ mod tests {
             3,
             "add_dolphins should spawn exactly 3 entities"
         );
+    }
+
+    /// Followers spawn fully offscreen; they must not be culled on the first tick.
+    #[test]
+    fn test_dolphins_offscreen_followers_survive_initial_frames() {
+        let mut a = make_anim();
+        add_dolphins(None, &mut a);
+        let now = Instant::now();
+        for e in &a.entities {
+            assert!(
+                !e.borrow().should_die(a.width(), a.height(), now),
+                "dolphins must not die before offscreen cleanup is enabled"
+            );
+        }
+    }
+
+    /// After moving, every dolphin should enable offscreen death once it intersects the viewport.
+    #[test]
+    fn test_dolphins_enable_offscreen_death_after_visible() {
+        let mut a = make_anim();
+        let before = pointers_before(&a);
+        add_dolphins(None, &mut a);
+        let dolphin_refs = added_since(&a, &before);
+        assert_eq!(dolphin_refs.len(), 3);
+
+        for _ in 0..80 {
+            let snapshot = a.entities.clone();
+            for eref in snapshot {
+                if !a.entities.iter().any(|e| Rc::ptr_eq(e, &eref)) {
+                    continue;
+                }
+                let cb = eref.borrow().callback;
+                if let Some(f) = cb {
+                    f(eref.clone(), &mut a);
+                }
+            }
+        }
+
+        assert_eq!(
+            a.entities.len(),
+            3,
+            "all three dolphins should still be present"
+        );
+        for e in &dolphin_refs {
+            assert!(
+                e.borrow().die_offscreen,
+                "each dolphin should enable offscreen cleanup after becoming visible"
+            );
+        }
     }
 
     #[test]
