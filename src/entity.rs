@@ -9,15 +9,15 @@ pub type EntityRef = Rc<RefCell<Entity>>;
 
 /// A behavior function for one entity that runs every frame.
 /// Plain fn pointer (no captures) used for movement and update logic.
-pub type EntityCallback       = fn(EntityRef, &mut crate::animation::Animation);
+pub type EntityCallback = fn(EntityRef, &mut crate::animation::Animation);
 
 /// Runs when an entity touches others.
 /// Plain fn pointer (no captures) used for hit reactions.
-pub type CollisionHandler     = fn(EntityRef, &mut crate::animation::Animation);
+pub type CollisionHandler = fn(EntityRef, &mut crate::animation::Animation);
 
 /// Runs right before an entity is removed.
 /// Stored as a boxed closure so it can capture values like the `classic` flag in fish respawn.
-pub type DeathCallback        = Box<dyn Fn(EntityRef, &mut crate::animation::Animation)>;
+pub type DeathCallback = Box<dyn Fn(EntityRef, &mut crate::animation::Animation)>;
 
 /// Polymorphic argument bag passed to callbacks.
 /// `Move` holds standard movement deltas `[dx, dy, dz, frameStep]`.
@@ -32,69 +32,69 @@ pub enum CallbackArgs {
 /// Includes sprite frames, movement data, collision data, and life rules.
 /// Fish, bubbles, hooks, and decorations all use this same base type.
 pub struct Entity {
-    pub entity_type:   String,
-    pub shapes:        Vec<String>,
-    pub colors:        Vec<String>,
-    pub x:             f64,
-    pub y:             f64,
-    pub z:             f64,
-    pub callback:      Option<EntityCallback>,
+    pub entity_type: String,
+    pub shapes: Vec<String>,
+    pub colors: Vec<String>,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub callback: Option<EntityCallback>,
     pub callback_args: CallbackArgs,
-    pub die_time:      Option<Instant>,
+    pub die_time: Option<Instant>,
     pub die_offscreen: bool,
-    pub die_frame:     i32,
+    pub die_frame: i32,
     pub death_callback: Option<DeathCallback>,
     pub default_color: String,
-    pub physical:      bool,
-    pub coll_handler:  Option<CollisionHandler>,
-    pub auto_trans:    bool,
-    pub transparent:   char,
+    pub physical: bool,
+    pub coll_handler: Option<CollisionHandler>,
+    pub auto_trans: bool,
+    pub transparent: char,
     pub current_frame: usize,
-    pub frame_time:    f64,
-    pub frame_count:   i32,
-    pub collision:     Vec<EntityRef>,
-    pub alive:         bool,
-    pub width:         usize,
-    pub height:        usize,
+    pub frame_time: f64,
+    pub frame_count: i32,
+    pub collision: Vec<EntityRef>,
+    pub alive: bool,
+    pub width: usize,
+    pub height: usize,
 }
 
 /// Input bundle used by `Entity::new`.
 /// `shape` holds one or more animation frames; `color` holds matching color masks.
 /// Single-frame entities pass a one-element Vec; animated entities pass more.
 pub struct EntityOptions {
-    pub entity_type:    String,
-    pub shape:          Vec<String>,
-    pub color:          Vec<String>,
-    pub position:       [i32; 3],
-    pub callback:       Option<EntityCallback>,
-    pub callback_args:  Option<CallbackArgs>,
-    pub die_time:       Option<Instant>,
-    pub die_offscreen:  bool,
-    pub die_frame:      i32,
+    pub entity_type: String,
+    pub shape: Vec<String>,
+    pub color: Vec<String>,
+    pub position: [i32; 3],
+    pub callback: Option<EntityCallback>,
+    pub callback_args: Option<CallbackArgs>,
+    pub die_time: Option<Instant>,
+    pub die_offscreen: bool,
+    pub die_frame: i32,
     pub death_callback: Option<DeathCallback>,
-    pub default_color:  String,
-    pub physical:       bool,
-    pub coll_handler:   Option<CollisionHandler>,
-    pub auto_trans:     bool,
+    pub default_color: String,
+    pub physical: bool,
+    pub coll_handler: Option<CollisionHandler>,
+    pub auto_trans: bool,
 }
 
 impl Default for EntityOptions {
     fn default() -> Self {
         Self {
-            entity_type:    String::new(),
-            shape:          Vec::new(),
-            color:          Vec::new(),
-            position:       [0, 0, 0],
-            callback:       None,
-            callback_args:  None,
-            die_time:       None,
-            die_offscreen:  false,
-            die_frame:      0,
+            entity_type: String::new(),
+            shape: Vec::new(),
+            color: Vec::new(),
+            position: [0, 0, 0],
+            callback: None,
+            callback_args: None,
+            die_time: None,
+            die_offscreen: false,
+            die_frame: 0,
             death_callback: None,
-            default_color:  String::new(),
-            physical:       false,
-            coll_handler:   None,
-            auto_trans:     false,
+            default_color: String::new(),
+            physical: false,
+            coll_handler: None,
+            auto_trans: false,
         }
     }
 }
@@ -106,8 +106,12 @@ impl Entity {
     pub fn new(opts: EntityOptions) -> EntityRef {
         let mut shapes = opts.shape;
         let mut colors = opts.color;
-        if shapes.is_empty() { shapes.push(String::new()); }
-        if colors.is_empty() { colors.push(String::new()); }
+        if shapes.is_empty() {
+            shapes.push(String::new());
+        }
+        if colors.is_empty() {
+            colors.push(String::new());
+        }
 
         let default_color = if opts.default_color.is_empty() {
             "WHITE".to_string()
@@ -115,33 +119,35 @@ impl Entity {
             opts.default_color.to_uppercase()
         };
 
-        let callback_args = opts.callback_args.unwrap_or(CallbackArgs::Move(vec![0.0, 0.0, 0.0, 0.5]));
+        let callback_args = opts
+            .callback_args
+            .unwrap_or(CallbackArgs::Move(vec![0.0, 0.0, 0.0, 0.5]));
 
         let mut e = Entity {
-            entity_type:    opts.entity_type,
+            entity_type: opts.entity_type,
             shapes,
             colors,
-            x:              opts.position[0] as f64,
-            y:              opts.position[1] as f64,
-            z:              opts.position[2] as f64,
-            callback:       opts.callback,
+            x: opts.position[0] as f64,
+            y: opts.position[1] as f64,
+            z: opts.position[2] as f64,
+            callback: opts.callback,
             callback_args,
-            die_time:       opts.die_time,
-            die_offscreen:  opts.die_offscreen,
-            die_frame:      opts.die_frame,
+            die_time: opts.die_time,
+            die_offscreen: opts.die_offscreen,
+            die_frame: opts.die_frame,
             death_callback: opts.death_callback,
             default_color,
-            physical:       opts.physical,
-            coll_handler:   opts.coll_handler,
-            auto_trans:     opts.auto_trans,
-            transparent:    ' ',
-            current_frame:  0,
-            frame_time:     0.0,
-            frame_count:    0,
-            collision:      Vec::new(),
-            alive:          true,
-            width:          0,
-            height:         0,
+            physical: opts.physical,
+            coll_handler: opts.coll_handler,
+            auto_trans: opts.auto_trans,
+            transparent: ' ',
+            current_frame: 0,
+            frame_time: 0.0,
+            frame_count: 0,
+            collision: Vec::new(),
+            alive: true,
+            width: 0,
+            height: 0,
         };
         e.update_dimensions();
         Rc::new(RefCell::new(e))
@@ -153,7 +159,7 @@ impl Entity {
     pub fn update_dimensions(&mut self) {
         let lines: Vec<&str> = self.shapes[0].split('\n').collect();
         self.height = lines.len();
-        self.width  = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
+        self.width = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
     }
 
     /// Returns integer screen coordinates for drawing and collisions.
@@ -171,14 +177,18 @@ impl Entity {
     /// Picks the frame to draw right now.
     /// It loops automatically when frame index passes frame count.
     pub fn current_shape(&self) -> &str {
-        if self.shapes.is_empty() { return ""; }
+        if self.shapes.is_empty() {
+            return "";
+        }
         &self.shapes[self.current_frame % self.shapes.len()]
     }
 
     /// Picks the active color-mask frame.
     /// Like shapes, this cycles through available mask frames.
     pub fn current_color(&self) -> &str {
-        if self.colors.is_empty() { return ""; }
+        if self.colors.is_empty() {
+            return "";
+        }
         &self.colors[self.current_frame % self.colors.len()]
     }
 
@@ -192,9 +202,13 @@ impl Entity {
     /// It handles manual kill, time/frame limits, and offscreen cleanup.
     /// Returning true means the entity should be deleted now.
     pub fn should_die(&self, screen_w: usize, screen_h: usize, now: Instant) -> bool {
-        if !self.alive { return true; }
+        if !self.alive {
+            return true;
+        }
         if let Some(t) = self.die_time {
-            if now >= t { return true; }
+            if now >= t {
+                return true;
+            }
         }
         if self.die_frame > 0 && self.frame_count >= self.die_frame {
             return true;
@@ -279,7 +293,11 @@ mod tests {
             assert_eq!(b.current_frame, 0, "frame should not advance on first call");
         }
         Entity::move_entity(e.clone(), &mut a);
-        assert_ne!(e.borrow().current_frame, 0, "frame should advance after second call (frame_time crosses 1.0)");
+        assert_ne!(
+            e.borrow().current_frame,
+            0,
+            "frame should advance after second call (frame_time crosses 1.0)"
+        );
     }
 
     // Mirrors Go's TestEntityShouldDie.
@@ -331,9 +349,15 @@ mod tests {
             die_frame: 3,
             ..Default::default()
         });
-        assert!(!e.borrow().should_die(100, 100, Instant::now()), "should not die before frame limit");
+        assert!(
+            !e.borrow().should_die(100, 100, Instant::now()),
+            "should not die before frame limit"
+        );
         e.borrow_mut().frame_count = 3;
-        assert!(e.borrow().should_die(100, 100, Instant::now()), "should die when frame_count reaches die_frame");
+        assert!(
+            e.borrow().should_die(100, 100, Instant::now()),
+            "should die when frame_count reaches die_frame"
+        );
     }
 
     #[test]
@@ -344,7 +368,10 @@ mod tests {
             position: [200, 0, 0],
             ..Default::default()
         });
-        assert!(e.borrow().should_die(100, 100, Instant::now()), "entity beyond screen right edge should die");
+        assert!(
+            e.borrow().should_die(100, 100, Instant::now()),
+            "entity beyond screen right edge should die"
+        );
     }
 
     #[test]
@@ -355,7 +382,10 @@ mod tests {
             position: [-10, 0, 0], // x + w = -10 + 3 = -7 < 0
             ..Default::default()
         });
-        assert!(e.borrow().should_die(100, 100, Instant::now()), "entity beyond screen left edge should die");
+        assert!(
+            e.borrow().should_die(100, 100, Instant::now()),
+            "entity beyond screen left edge should die"
+        );
     }
 
     #[test]
@@ -404,8 +434,14 @@ mod tests {
 
     #[test]
     fn test_entity_empty_shape_gets_placeholder() {
-        let e = Entity::new(EntityOptions { ..Default::default() });
-        assert_eq!(e.borrow().shapes.len(), 1, "empty shape list should get one placeholder");
+        let e = Entity::new(EntityOptions {
+            ..Default::default()
+        });
+        assert_eq!(
+            e.borrow().shapes.len(),
+            1,
+            "empty shape list should get one placeholder"
+        );
         assert_eq!(e.borrow().current_shape(), "");
     }
 

@@ -14,10 +14,10 @@ pub fn run_cli(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 
     for arg in args {
         match arg.as_str() {
-            "--info"             => show_info = true,
-            "--version" | "-v"  => show_version = true,
-            "--classic"         => classic = true,
-            other               => return Err(format!("unknown flag: {}", other).into()),
+            "--info" => show_info = true,
+            "--version" | "-v" => show_version = true,
+            "--classic" => classic = true,
+            other => return Err(format!("unknown flag: {}", other).into()),
         }
     }
 

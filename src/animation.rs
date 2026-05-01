@@ -17,10 +17,10 @@ use crate::info::info_lines;
 /// Most game flow starts from this structure.
 pub struct Animation {
     pub entities: Vec<EntityRef>,
-    pub width:    usize,
-    pub height:   usize,
-    running:      bool,
-    stdout:       BufWriter<io::Stdout>,
+    pub width: usize,
+    pub height: usize,
+    running: bool,
+    stdout: BufWriter<io::Stdout>,
 }
 
 impl Animation {
@@ -29,20 +29,24 @@ impl Animation {
     pub fn new() -> Self {
         Animation {
             entities: Vec::new(),
-            width:    0,
-            height:   0,
-            running:  false,
-            stdout:   BufWriter::new(io::stdout()),
+            width: 0,
+            height: 0,
+            running: false,
+            stdout: BufWriter::new(io::stdout()),
         }
     }
 
     /// Returns current drawable screen width in cells.
     /// Spawners use this value to place entities safely.
-    pub fn width(&self)  -> usize { self.width }
+    pub fn width(&self) -> usize {
+        self.width
+    }
 
     /// Returns current drawable screen height in cells.
     /// This updates after terminal resize events.
-    pub fn height(&self) -> usize { self.height }
+    pub fn height(&self) -> usize {
+        self.height
+    }
 
     /// Builds an entity and adds it to the world.
     /// This helper saves you from calling two functions manually.
@@ -57,7 +61,9 @@ impl Animation {
     pub fn add_entity(&mut self, e: EntityRef) {
         self.entities.push(e);
         self.entities.sort_by(|a, b| {
-            a.borrow().z.partial_cmp(&b.borrow().z)
+            a.borrow()
+                .z
+                .partial_cmp(&b.borrow().z)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
     }
@@ -77,7 +83,8 @@ impl Animation {
     /// Returns objects with the same type label.
     /// Behavior code uses it to find hooks, teeth, lines, etc.
     pub fn get_entities_by_type(&self, tp: &str) -> Vec<EntityRef> {
-        self.entities.iter()
+        self.entities
+            .iter()
             .filter(|e| e.borrow().entity_type == tp)
             .cloned()
             .collect()
@@ -89,10 +96,11 @@ impl Animation {
     fn update_size(&mut self, w: u16, h: u16) -> Result<(), String> {
         if h < 15 || w < 40 {
             return Err(format!(
-                "terminal too small: need at least 40x15, got {}x{}", w, h
+                "terminal too small: need at least 40x15, got {}x{}",
+                w, h
             ));
         }
-        self.width  = w as usize;
+        self.width = w as usize;
         self.height = (h - 1) as usize;
         Ok(())
     }
@@ -107,7 +115,9 @@ impl Animation {
         let n = self.entities.len();
         for i in 0..n {
             let physical = self.entities[i].borrow().physical;
-            if !physical { continue; }
+            if !physical {
+                continue;
+            }
             let (ex, ey, ew, eh) = {
                 let e = self.entities[i].borrow();
                 let (x, y, _) = e.position();
@@ -115,7 +125,9 @@ impl Animation {
                 (x, y, w as i32, h as i32)
             };
             for j in 0..n {
-                if i == j { continue; }
+                if i == j {
+                    continue;
+                }
                 let (ox, oy, ow, oh) = {
                     let o = self.entities[j].borrow();
                     let (x, y, _) = o.position();
@@ -136,22 +148,28 @@ impl Animation {
     fn draw_entity(&mut self, eref: &EntityRef) {
         let e = eref.borrow();
         let (ex, ey, _) = e.position();
-        let shape       = e.current_shape().to_string();
-        let color_mask  = e.current_color().to_string();
+        let shape = e.current_shape().to_string();
+        let color_mask = e.current_color().to_string();
         let default_col = color_by_name(&e.default_color);
-        let auto_trans  = e.auto_trans;
+        let auto_trans = e.auto_trans;
         let transparent = e.transparent;
-        let draw_up     = e.entity_type == "fishline";
+        let draw_up = e.entity_type == "fishline";
         let sw = self.width as i32;
         let sh = self.height as i32;
         drop(e); // release borrow before touching stdout
 
-        let lines:       Vec<&str> = shape.split('\n').collect();
+        let lines: Vec<&str> = shape.split('\n').collect();
         let color_lines: Vec<&str> = color_mask.split('\n').collect();
 
         for (li, line) in lines.iter().enumerate() {
-            let draw_y = if draw_up { ey - li as i32 } else { ey + li as i32 };
-            if draw_y < 0 || draw_y >= sh { continue; }
+            let draw_y = if draw_up {
+                ey - li as i32
+            } else {
+                ey + li as i32
+            };
+            if draw_y < 0 || draw_y >= sh {
+                continue;
+            }
 
             let color_chars: Vec<char> = if li < color_lines.len() {
                 color_lines[li].chars().collect()
@@ -162,9 +180,15 @@ impl Animation {
             let mut last_color: Option<Color> = None;
             for (ci, ch) in line.chars().enumerate() {
                 let draw_x = ex + ci as i32;
-                if draw_x < 0 || draw_x >= sw { continue; }
-                if auto_trans && (ch == ' ' || ch == transparent) { continue; }
-                if (ch as u32) < 32 { continue; }
+                if draw_x < 0 || draw_x >= sw {
+                    continue;
+                }
+                if auto_trans && (ch == ' ' || ch == transparent) {
+                    continue;
+                }
+                if (ch as u32) < 32 {
+                    continue;
+                }
 
                 let col = if ci < color_chars.len() {
                     mask_color(color_chars[ci]).unwrap_or(default_col)
@@ -176,11 +200,7 @@ impl Animation {
                     let _ = queue!(self.stdout, SetForegroundColor(col));
                     last_color = Some(col);
                 }
-                let _ = queue!(
-                    self.stdout,
-                    MoveTo(draw_x as u16, draw_y as u16),
-                    Print(ch)
-                );
+                let _ = queue!(self.stdout, MoveTo(draw_x as u16, draw_y as u16), Print(ch));
             }
         }
     }
@@ -192,7 +212,9 @@ impl Animation {
         let sorted: Vec<EntityRef> = {
             let mut v = self.entities.clone();
             v.sort_by(|a, b| {
-                b.borrow().z.partial_cmp(&a.borrow().z)
+                b.borrow()
+                    .z
+                    .partial_cmp(&a.borrow().z)
                     .unwrap_or(std::cmp::Ordering::Equal)
             });
             v
@@ -207,15 +229,22 @@ impl Animation {
     /// Also clamps preserved entity Y positions into the drawable vertical range.
     fn reflow_for_resize(&mut self) {
         self.entities.retain(|e| {
-            !matches!(e.borrow().entity_type.as_str(), "waterline" | "castle" | "seaweed")
+            !matches!(
+                e.borrow().entity_type.as_str(),
+                "waterline" | "castle" | "seaweed"
+            )
         });
         let h = self.height;
         for eref in &self.entities {
             let mut e = eref.borrow_mut();
             let eh = e.height;
             let max_y = if h > eh { (h - eh) as f64 } else { 0.0 };
-            if e.y < 0.0 { e.y = 0.0; }
-            if e.y > max_y { e.y = max_y; }
+            if e.y < 0.0 {
+                e.y = 0.0;
+            }
+            if e.y > max_y {
+                e.y = max_y;
+            }
         }
         crate::environment::add_environment(self);
         crate::environment::add_castle(self);
@@ -232,11 +261,15 @@ impl Animation {
         let start_y = ((h - lines.len() as i32) / 2).max(0);
         for (i, ln) in lines.iter().enumerate() {
             let y = start_y + i as i32;
-            if y >= h { break; }
+            if y >= h {
+                break;
+            }
             let chars: Vec<char> = ln.chars().collect();
             let x = ((w - chars.len() as i32) / 2).max(0);
             for (ci, &ch) in chars.iter().enumerate() {
-                if x + ci as i32 >= w { break; }
+                if x + ci as i32 >= w {
+                    break;
+                }
                 let col = info_color_for(i, ln, ch);
                 let _ = queue!(
                     self.stdout,
@@ -263,7 +296,7 @@ impl Animation {
             let cb = eref.borrow().callback;
             match cb {
                 Some(f) => f(eref.clone(), self),
-                None    => Entity::move_entity(eref.clone(), self),
+                None => Entity::move_entity(eref.clone(), self),
             }
             // Collision handlers use previous frame's data; still valid here.
             let has_coll = {
@@ -333,7 +366,7 @@ impl Animation {
         self.running = true;
         setup(self, classic);
 
-        let mut paused      = false;
+        let mut paused = false;
         let mut showing_info = false;
 
         while self.running {
@@ -342,7 +375,11 @@ impl Animation {
                     Event::Resize(w, h) => {
                         self.update_size(w, h)?;
                         self.reflow_for_resize();
-                        if showing_info { self.draw_info_overlay(); } else { self.draw_frame(); }
+                        if showing_info {
+                            self.draw_info_overlay();
+                        } else {
+                            self.draw_frame();
+                        }
                     }
                     Event::Key(key) => match key.code {
                         KeyCode::Esc if showing_info => {
@@ -389,15 +426,15 @@ impl Animation {
 /// Unknown names are treated as white so drawing still works.
 fn color_by_name(name: &str) -> Color {
     match name.to_uppercase().as_str() {
-        "BLACK"     => Color::Black,
+        "BLACK" => Color::Black,
         "DARK_GREY" => Color::DarkGrey,
-        "RED"     => Color::Red,
-        "GREEN"   => Color::Green,
-        "YELLOW"  => Color::Yellow,
-        "BLUE"    => Color::Blue,
+        "RED" => Color::Red,
+        "GREEN" => Color::Green,
+        "YELLOW" => Color::Yellow,
+        "BLUE" => Color::Blue,
         "MAGENTA" => Color::DarkMagenta,
-        "CYAN"    => Color::DarkCyan,
-        _         => Color::White,
+        "CYAN" => Color::DarkCyan,
+        _ => Color::White,
     }
 }
 
@@ -405,36 +442,56 @@ fn color_by_name(name: &str) -> Color {
 /// Returns None for spaces and non-color characters so the caller falls back to the entity default.
 fn mask_color(ch: char) -> Option<Color> {
     match ch {
-        'r' | 'R' => Some(Color::Red),
-        'g' | 'G' => Some(Color::Green),
-        'y' | 'Y' => Some(Color::Yellow),
-        'b' | 'B' => Some(Color::Blue),
-        'm' | 'M' => Some(Color::DarkMagenta),
-        'c' | 'C' => Some(Color::DarkCyan),
-        'w' | 'W' => Some(Color::White),
-        'k' | 'K' => Some(Color::Black),
-        '1'       => Some(Color::DarkCyan),
-        '2'       => Some(Color::Yellow),
-        '3'       => Some(Color::Green),
-        '4'       => Some(Color::White),
-        '5'       => Some(Color::Red),
-        '6'       => Some(Color::Blue),
-        '7'       => Some(Color::DarkMagenta),
-        '8'       => Some(Color::Black),
-        '9'       => Some(Color::White),
-        _         => None,
+        'r' => Some(Color::DarkRed),
+        'g' => Some(Color::DarkGreen),
+        'y' => Some(Color::DarkYellow),
+        'b' => Some(Color::DarkBlue),
+        'm' => Some(Color::DarkMagenta),
+        'c' => Some(Color::DarkCyan),
+        'w' => Some(Color::Grey),
+        'k' => Some(Color::Black),
+
+        'R' => Some(Color::Red),
+        'G' => Some(Color::Green),
+        'Y' => Some(Color::Yellow),
+        'B' => Some(Color::Blue),
+        'M' => Some(Color::Magenta),
+        'C' => Some(Color::Cyan),
+        'W' => Some(Color::White),
+        'K' => Some(Color::DarkGrey),
+
+        '1' => Some(Color::DarkCyan),
+        '2' => Some(Color::Yellow),
+        '3' => Some(Color::Green),
+        '4' => Some(Color::White),
+        '5' => Some(Color::Red),
+        '6' => Some(Color::Blue),
+        '7' => Some(Color::DarkMagenta),
+        '8' => Some(Color::Black),
+        '9' => Some(Color::White),
+        _ => None,
     }
 }
 
 /// Returns a color for one character in the info overlay.
 /// It keeps colors consistent across header, controls, and hint lines.
 fn info_color_for(line_idx: usize, line: &str, ch: char) -> Color {
-    if ch == ' ' { return Color::White; }
-    if line_idx <= 4 {
-        return if "╔═╗║╚╝".contains(ch) { Color::DarkCyan } else { Color::White };
+    if ch == ' ' {
+        return Color::White;
     }
-    if line.contains("Q/q quit")        { return Color::Green; }
-    if line.contains("Press I or ESC")  { return Color::DarkMagenta; }
+    if line_idx <= 4 {
+        return if "╔═╗║╚╝".contains(ch) {
+            Color::DarkCyan
+        } else {
+            Color::White
+        };
+    }
+    if line.contains("Q/q quit") {
+        return Color::Green;
+    }
+    if line.contains("Press I or ESC") {
+        return Color::DarkMagenta;
+    }
     Color::White
 }
 
@@ -477,7 +534,10 @@ mod tests {
         });
         a.entities = vec![e1.clone(), e2.clone()];
         a.check_collisions();
-        assert!(!e1.borrow().collision.is_empty(), "expected e1 to detect collision with overlapping e2");
+        assert!(
+            !e1.borrow().collision.is_empty(),
+            "expected e1 to detect collision with overlapping e2"
+        );
     }
 
     #[test]
@@ -496,7 +556,10 @@ mod tests {
         });
         a.entities = vec![e1.clone(), e2.clone()];
         a.check_collisions();
-        assert!(e1.borrow().collision.is_empty(), "entities 10 cells apart should not collide");
+        assert!(
+            e1.borrow().collision.is_empty(),
+            "entities 10 cells apart should not collide"
+        );
     }
 
     #[test]
@@ -515,16 +578,31 @@ mod tests {
         });
         a.entities = vec![e1.clone(), e2.clone()];
         a.check_collisions();
-        assert!(e1.borrow().collision.is_empty(), "non-physical entity must not record collisions");
+        assert!(
+            e1.borrow().collision.is_empty(),
+            "non-physical entity must not record collisions"
+        );
     }
 
     #[test]
     fn test_get_entities_by_type() {
         let mut a = make_anim();
         a.entities = vec![
-            Entity::new(EntityOptions { entity_type: "fish".into(),  shape: vec!["x".into()], ..Default::default() }),
-            Entity::new(EntityOptions { entity_type: "shark".into(), shape: vec!["x".into()], ..Default::default() }),
-            Entity::new(EntityOptions { entity_type: "fish".into(),  shape: vec!["x".into()], ..Default::default() }),
+            Entity::new(EntityOptions {
+                entity_type: "fish".into(),
+                shape: vec!["x".into()],
+                ..Default::default()
+            }),
+            Entity::new(EntityOptions {
+                entity_type: "shark".into(),
+                shape: vec!["x".into()],
+                ..Default::default()
+            }),
+            Entity::new(EntityOptions {
+                entity_type: "fish".into(),
+                shape: vec!["x".into()],
+                ..Default::default()
+            }),
         ];
         assert_eq!(a.get_entities_by_type("fish").len(), 2);
         assert_eq!(a.get_entities_by_type("shark").len(), 1);
@@ -534,31 +612,65 @@ mod tests {
     #[test]
     fn test_del_entity_removes_by_pointer() {
         let mut a = make_anim();
-        let e1 = Entity::new(EntityOptions { shape: vec!["x".into()], ..Default::default() });
-        let e2 = Entity::new(EntityOptions { shape: vec!["x".into()], ..Default::default() });
+        let e1 = Entity::new(EntityOptions {
+            shape: vec!["x".into()],
+            ..Default::default()
+        });
+        let e2 = Entity::new(EntityOptions {
+            shape: vec!["x".into()],
+            ..Default::default()
+        });
         a.entities = vec![e1.clone(), e2.clone()];
         a.del_entity(&e1);
         assert_eq!(a.entities.len(), 1);
-        assert!(std::rc::Rc::ptr_eq(&a.entities[0], &e2), "e2 should remain after removing e1");
+        assert!(
+            std::rc::Rc::ptr_eq(&a.entities[0], &e2),
+            "e2 should remain after removing e1"
+        );
     }
 
     #[test]
     fn test_add_entity_maintains_ascending_z_order() {
         let mut a = make_anim();
-        a.add_entity(Entity::new(EntityOptions { shape: vec!["x".into()], position: [0,0,5], ..Default::default() }));
-        a.add_entity(Entity::new(EntityOptions { shape: vec!["x".into()], position: [0,0,1], ..Default::default() }));
-        a.add_entity(Entity::new(EntityOptions { shape: vec!["x".into()], position: [0,0,3], ..Default::default() }));
+        a.add_entity(Entity::new(EntityOptions {
+            shape: vec!["x".into()],
+            position: [0, 0, 5],
+            ..Default::default()
+        }));
+        a.add_entity(Entity::new(EntityOptions {
+            shape: vec!["x".into()],
+            position: [0, 0, 1],
+            ..Default::default()
+        }));
+        a.add_entity(Entity::new(EntityOptions {
+            shape: vec!["x".into()],
+            position: [0, 0, 3],
+            ..Default::default()
+        }));
         let zs: Vec<i32> = a.entities.iter().map(|e| e.borrow().z as i32).collect();
-        assert_eq!(zs, vec![1, 3, 5], "add_entity should keep entities sorted by ascending z");
+        assert_eq!(
+            zs,
+            vec![1, 3, 5],
+            "add_entity should keep entities sorted by ascending z"
+        );
     }
 
     #[test]
     fn test_remove_all_entities_clears_list() {
         let mut a = make_anim();
-        a.entities.push(Entity::new(EntityOptions { shape: vec!["x".into()], ..Default::default() }));
-        a.entities.push(Entity::new(EntityOptions { shape: vec!["x".into()], ..Default::default() }));
+        a.entities.push(Entity::new(EntityOptions {
+            shape: vec!["x".into()],
+            ..Default::default()
+        }));
+        a.entities.push(Entity::new(EntityOptions {
+            shape: vec!["x".into()],
+            ..Default::default()
+        }));
         a.remove_all_entities();
-        assert!(a.entities.is_empty(), "remove_all_entities should clear all entities");
+        assert!(
+            a.entities.is_empty(),
+            "remove_all_entities should clear all entities"
+        );
     }
 
     // Mirrors Go's TestReflowForResizePreservesDynamicAndRebuildsStatic.
@@ -569,13 +681,13 @@ mod tests {
 
         let fish = Entity::new(EntityOptions {
             entity_type: "fish".into(),
-            shape:        vec!["><>".into()],
-            position:     [8, 35, crate::depth::DEPTH_FISH_START],
+            shape: vec!["><>".into()],
+            position: [8, 35, crate::depth::DEPTH_FISH_START],
             ..Default::default()
         });
         a.add_entity(fish.clone());
 
-        a.width  = 80;
+        a.width = 80;
         a.height = 25;
         a.reflow_for_resize();
 
@@ -585,10 +697,14 @@ mod tests {
         );
 
         {
-            let fb  = fish.borrow();
+            let fb = fish.borrow();
             let max = (a.height.saturating_sub(fb.height)) as f64;
-            assert!(fb.y >= 0.0 && fb.y <= max,
-                "fish y={} should be clamped to [0, {}] after reflow", fb.y, max);
+            assert!(
+                fb.y >= 0.0 && fb.y <= max,
+                "fish y={} should be clamped to [0, {}] after reflow",
+                fb.y,
+                max
+            );
         }
 
         let castles = a.get_entities_by_type("castle");
@@ -597,12 +713,19 @@ mod tests {
         assert_eq!(cx, a.width as i32 - 32, "castle x wrong after reflow");
         assert_eq!(cy, a.height as i32 - 13, "castle y wrong after reflow");
 
-        assert_eq!(a.get_entities_by_type("waterline").len(), 4,
-            "expected 4 waterline entities after reflow");
+        assert_eq!(
+            a.get_entities_by_type("waterline").len(),
+            4,
+            "expected 4 waterline entities after reflow"
+        );
 
         let want_seaweed = a.width / 15;
-        assert_eq!(a.get_entities_by_type("seaweed").len(), want_seaweed,
-            "expected {} seaweed entities after reflow", want_seaweed);
+        assert_eq!(
+            a.get_entities_by_type("seaweed").len(),
+            want_seaweed,
+            "expected {} seaweed entities after reflow",
+            want_seaweed
+        );
     }
 
     #[test]
@@ -610,24 +733,24 @@ mod tests {
         let mut a = make_anim();
 
         let fish = Entity::new(EntityOptions {
-            entity_type:  "fish".into(),
-            shape:        vec!["<><".into()],
-            position:     [20, 20, crate::depth::DEPTH_FISH_START],
-            physical:     true,
+            entity_type: "fish".into(),
+            shape: vec!["<><".into()],
+            position: [20, 20, crate::depth::DEPTH_FISH_START],
+            physical: true,
             coll_handler: Some(crate::fish::fish_collision),
             ..Default::default()
         });
         let hook_point = Entity::new(EntityOptions {
             entity_type: "hook_point".into(),
-            shape:       vec![".".into()],
-            position:    [20, 20, crate::depth::DEPTH_SHARK + 1],
-            physical:    true,
+            shape: vec![".".into()],
+            position: [20, 20, crate::depth::DEPTH_SHARK + 1],
+            physical: true,
             ..Default::default()
         });
         let fishhook = Entity::new(EntityOptions {
-            entity_type:   "fishhook".into(),
-            shape:         vec!["J".into()],
-            position:      [20, 20, crate::depth::DEPTH_WATER_LINE1],
+            entity_type: "fishhook".into(),
+            shape: vec!["J".into()],
+            position: [20, 20, crate::depth::DEPTH_WATER_LINE1],
             callback_args: Some(CallbackArgs::State({
                 let mut m = std::collections::HashMap::new();
                 m.insert("mode".into(), "lowering".into());
@@ -636,9 +759,9 @@ mod tests {
             ..Default::default()
         });
         let fishline = Entity::new(EntityOptions {
-            entity_type:   "fishline".into(),
-            shape:         vec!["|".into()],
-            position:      [21, 20, crate::depth::DEPTH_WATER_LINE1],
+            entity_type: "fishline".into(),
+            shape: vec!["|".into()],
+            position: [21, 20, crate::depth::DEPTH_WATER_LINE1],
             callback_args: Some(CallbackArgs::State({
                 let mut m = std::collections::HashMap::new();
                 m.insert("mode".into(), "lowering".into());
@@ -647,11 +770,20 @@ mod tests {
             ..Default::default()
         });
 
-        a.entities = vec![fish.clone(), hook_point.clone(), fishhook.clone(), fishline.clone()];
+        a.entities = vec![
+            fish.clone(),
+            hook_point.clone(),
+            fishhook.clone(),
+            fishline.clone(),
+        ];
         a.check_collisions();
         a.animate();
 
-        for (name, e) in [("fish", fish), ("fishhook", fishhook), ("fishline", fishline)] {
+        for (name, e) in [
+            ("fish", fish),
+            ("fishhook", fishhook),
+            ("fishline", fishline),
+        ] {
             let b = e.borrow();
             if let CallbackArgs::State(ref m) = b.callback_args {
                 assert_eq!(

@@ -30,7 +30,10 @@ pub fn info_lines() -> Vec<String> {
     vec![
         "╔═══════════════════════════════════════════════════════════════════════╗".into(),
         "║                                                                       ║".into(),
-        format!("║         Asciiquarium {} - ASCII Art Aquarium Animation          ║", VERSION),
+        format!(
+            "║         Asciiquarium {} - ASCII Art Aquarium Animation          ║",
+            VERSION
+        ),
         "║                                                                       ║".into(),
         "╚═══════════════════════════════════════════════════════════════════════╝".into(),
         "".into(),
