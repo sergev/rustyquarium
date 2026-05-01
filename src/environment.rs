@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use rand::Rng;
+use rand::RngExt;
 
 use crate::animation::Animation;
 use crate::depth::*;
@@ -85,8 +85,8 @@ WWWWWWW WWWWW W W WWWWWWWWWWWWWW
 /// It does not move position; only the frame index changes to fake swaying.
 /// When lifetime ends, the death callback spawns a replacement plant.
 pub fn add_seaweed(dead: Option<crate::entity::EntityRef>, anim: &mut Animation) {
-    let mut rng = rand::thread_rng();
-    let height = rng.gen_range(3..=6);
+    let mut rng = rand::rng();
+    let height = rng.random_range(3..=6);
     let mut frames = [String::new(), String::new()];
     for i in 1..=height {
         let left = i % 2;
@@ -95,11 +95,11 @@ pub fn add_seaweed(dead: Option<crate::entity::EntityRef>, anim: &mut Animation)
         frames[right] += " )\n";
     }
     let max_x = (anim.width() as i32 - 2).max(1);
-    let x = rng.gen_range(1..=max_x);
+    let x = rng.random_range(1..=max_x);
     let y_raw = anim.height() as i32 - height as i32;
     let y = y_raw.max(9);
-    let speed = 0.25 + rng.gen::<f64>() * 0.05;
-    let secs = 8 * 60 + rng.gen_range(0..4 * 60);
+    let speed = 0.25 + rng.random::<f64>() * 0.05;
+    let secs = 8 * 60 + rng.random_range(0..4 * 60);
     let die_time = Instant::now() + Duration::from_secs(secs);
 
     let _ = dead; // ignored, matches Go's _ *Entity

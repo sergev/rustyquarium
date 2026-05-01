@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::RngExt;
 
 use crate::animation::Animation;
 use crate::depth::*;
@@ -57,7 +57,7 @@ fn bubble_collision(bubble: EntityRef, _anim: &mut Animation) {
 /// Adds random bubble behavior to fish.
 /// After that, it uses normal movement logic.
 pub fn fish_callback(fish: EntityRef, anim: &mut Animation) {
-    if rand::thread_rng().gen_range(1..=100) > 97 {
+    if rand::rng().random_range(1..=100) > 97 {
         add_bubble(fish.clone(), anim);
     }
     Entity::move_entity(fish, anim);
@@ -255,11 +255,11 @@ static NEW_FISH: &[FishDesign] = &[
 /// This keeps fish colors varied without changing the shape art.
 fn rand_color(mask: &str) -> String {
     let palette = ["c", "C", "r", "R", "y", "Y", "b", "B", "g", "G", "m", "M"];
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut out = mask.to_string();
     for i in 1..=9u8 {
         let digit = (b'0' + i) as char;
-        let replacement = palette[rng.gen_range(0..palette.len())];
+        let replacement = palette[rng.random_range(0..palette.len())];
         out = out.replace(digit, replacement);
     }
     out
@@ -269,21 +269,21 @@ fn rand_color(mask: &str) -> String {
 /// Direction chooses speed sign and which side of the screen the fish starts from.
 /// The death callback respawns another fish, keeping the population stable.
 pub fn add_fish(dead: Option<EntityRef>, anim: &mut Animation, classic: bool) {
-    let mut rng = rand::thread_rng();
-    let (shape_pair, color_pair) = if classic || rng.gen_range(1..=12) <= 8 {
-        let d = &OLD_FISH[rng.gen_range(0..OLD_FISH.len())];
+    let mut rng = rand::rng();
+    let (shape_pair, color_pair) = if classic || rng.random_range(1..=12) <= 8 {
+        let d = &OLD_FISH[rng.random_range(0..OLD_FISH.len())];
         (d.shape, d.color)
     } else {
-        let d = &NEW_FISH[rng.gen_range(0..NEW_FISH.len())];
+        let d = &NEW_FISH[rng.random_range(0..NEW_FISH.len())];
         (d.shape, d.color)
     };
 
-    let direction: usize = rng.gen_range(0..2);
-    let mut speed = 0.25 + rng.gen::<f64>() * 1.75;
+    let direction: usize = rng.random_range(0..2);
+    let mut speed = 0.25 + rng.random::<f64>() * 1.75;
     if direction == 1 {
         speed = -speed;
     }
-    let depth = DEPTH_FISH_START + rng.gen_range(0..=(DEPTH_FISH_END - DEPTH_FISH_START));
+    let depth = DEPTH_FISH_START + rng.random_range(0..=(DEPTH_FISH_END - DEPTH_FISH_START));
 
     let shape = vec![shape_pair[direction].to_string()];
     let color = vec![rand_color(color_pair[direction])];
@@ -309,7 +309,7 @@ pub fn add_fish(dead: Option<EntityRef>, anim: &mut Animation, classic: bool) {
     let (fw, fh) = fish.borrow().size();
     let available = screen_bottom - water_bottom - fh as i32;
     fish.borrow_mut().y = if available > 0 {
-        (water_bottom + rng.gen_range(0..=available)) as f64
+        (water_bottom + rng.random_range(0..=available)) as f64
     } else {
         water_bottom as f64
     };

@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::RngExt;
 
 use crate::animation::Animation;
 use crate::depth::*;
@@ -18,8 +18,8 @@ pub fn add_shark(_dead: Option<EntityRef>, anim: &mut Animation) {
         "\n\n\n\n\n                                           cR\n \n                                          cWWWWWWWW\n\n\n",
         "\n\n\n\n        Rc\n\n  WWWWWWWWc\n\n\n\n",
     ];
-    let mut rng = rand::thread_rng();
-    let direction = rng.gen_range(0..2);
+    let mut rng = rand::rng();
+    let direction = rng.random_range(0..2);
     let mut y = 9i32;
     let mut teeth_y;
     let speed;
@@ -27,7 +27,7 @@ pub fn add_shark(_dead: Option<EntityRef>, anim: &mut Animation) {
     let teeth_x;
 
     if anim.height() as i32 > 19 {
-        y += rng.gen_range(0..=(anim.height() as i32 - 19).max(1));
+        y += rng.random_range(0..=(anim.height() as i32 - 19).max(1));
     }
     teeth_y = y + 7;
 
@@ -87,8 +87,8 @@ pub fn add_ship(_dead: Option<EntityRef>, anim: &mut Animation) {
         "     y    y    y\n\n                  w\n                   ww\nyyyyyyyyyyyyyyyyyyyywwwyy\ny                   y",
         "         y    y    y\n\n      w\n    ww\nyywwwyyyyyyyyyyyyyyyyyyyy\n    y                   y",
     ];
-    let mut rng = rand::thread_rng();
-    let dir = rng.gen_range(0..2);
+    let mut rng = rand::rng();
+    let dir = rng.random_range(0..2);
     let speed;
     let x;
     if dir == 0 {
@@ -135,8 +135,8 @@ pub fn add_whale(_dead: Option<EntityRef>, anim: &mut Animation) {
         "\n\n\n;     ;",
     ];
 
-    let mut rng = rand::thread_rng();
-    let dir = rng.gen_range(0..2);
+    let mut rng = rand::rng();
+    let dir = rng.random_range(0..2);
     let speed;
     let x;
     let spout_align;
@@ -183,8 +183,8 @@ pub fn add_whale(_dead: Option<EntityRef>, anim: &mut Animation) {
 /// Spawns a sea monster crossing the screen.
 /// It picks between the newer and classic animated monster designs.
 pub fn add_monster(dead: Option<EntityRef>, anim: &mut Animation) {
-    let mut rng = rand::thread_rng();
-    if rng.gen_range(0..2) == 0 {
+    let mut rng = rand::rng();
+    if rng.random_range(0..2) == 0 {
         add_new_monster(dead, anim);
     } else {
         add_old_monster(dead, anim);
@@ -208,8 +208,8 @@ fn add_new_monster(_dead: Option<EntityRef>, anim: &mut Animation) {
         "\n                                                W W\n\n\n\n",
         "\n   W W\n\n\n\n",
     ];
-    let mut rng = rand::thread_rng();
-    let dir = rng.gen_range(0..2);
+    let mut rng = rand::rng();
+    let dir = rng.random_range(0..2);
     let speed;
     let x;
     if dir == 0 {
@@ -254,8 +254,8 @@ fn add_old_monster(_dead: Option<EntityRef>, anim: &mut Animation) {
         "\n\n                                                            W\n\n\n",
         "\n\n     W\n\n\n",
     ];
-    let mut rng = rand::thread_rng();
-    let dir = rng.gen_range(0..2);
+    let mut rng = rand::rng();
+    let dir = rng.random_range(0..2);
     let speed;
     let x;
     if dir == 0 {
@@ -290,8 +290,8 @@ fn add_old_monster(_dead: Option<EntityRef>, anim: &mut Animation) {
 /// Creates a larger fast fish variant.
 /// Keeps upstream weighting: design 2 appears 2/3 of the time.
 pub fn add_big_fish(dead: Option<EntityRef>, anim: &mut Animation) {
-    let mut rng = rand::thread_rng();
-    if rng.gen_range(0..3) > 0 {
+    let mut rng = rand::rng();
+    if rng.random_range(0..3) > 0 {
         add_big_fish2(dead, anim);
     } else {
         add_big_fish1(dead, anim);
@@ -302,11 +302,11 @@ pub fn add_big_fish(dead: Option<EntityRef>, anim: &mut Animation) {
 /// Digits 1–9 become random color marker letters so big fish colors vary each run.
 fn rand_color(mask: &str) -> String {
     let palette = ["c", "C", "r", "R", "y", "Y", "b", "B", "g", "G", "m", "M"];
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut out = mask.to_string();
     for i in 1..=9u8 {
         let digit = (b'0' + i) as char;
-        let repl = palette[rng.gen_range(0..palette.len())];
+        let repl = palette[rng.random_range(0..palette.len())];
         out = out.replace(digit, repl);
     }
     out
@@ -322,8 +322,8 @@ fn add_big_fish1(_dead: Option<EntityRef>, anim: &mut Animation) {
         " 111111\n11111  11111111111111111\n     11  2      2       111\n       1     2     2       11\n 1     1   2    2          1 1\n1 11   1                  1W1 111\n 11 1111     2     1111       1111\n   1     2        1  1  1     111\n 11 1111   2    2  1111  111 11\n1 11   1               2   11\n 1   11  2    2     2   111\n   111111111111111111111\n   11             1111\n               11111",
         "                           111111\n          11111111111111111  11111\n       111       2      2  11\n     11       2     2     1\n    1 1          2    2   1     1\n 111 1W1                  1   11 1\n1111       1111     2     1111 11\n 111     1  1  1        2     1\n   11 111  1111  2    2   1111 11\n     11   2               1   11 1\n       111   2     2    2  11   1\n          111111111111111111111\n            1111             11\n              11111",
     ];
-    let mut rng = rand::thread_rng();
-    let dir = rng.gen_range(0..2);
+    let mut rng = rand::rng();
+    let dir = rng.random_range(0..2);
     let speed;
     let x;
     if dir == 0 {
@@ -336,7 +336,7 @@ fn add_big_fish1(_dead: Option<EntityRef>, anim: &mut Animation) {
     let max_h = 9;
     let min_h = anim.height() as i32 - 15;
     let y = if min_h > max_h {
-        max_h + rng.gen_range(0..=(min_h - max_h))
+        max_h + rng.random_range(0..=(min_h - max_h))
     } else {
         max_h
     };
@@ -363,8 +363,8 @@ fn add_big_fish2(_dead: Option<EntityRef>, anim: &mut Animation) {
         "                1 1 1\n             1111 1 11111\n           111 1 1 1 1 1 1\n11111     1 1 1 11111111111\n1111111  11 111112 2 2 2 2 111\n  111111111112 2 2 2 2 2 2 22 1\n  111 1111 12 22 22 11111    W 1\n   11111112 2 2  2 2 111111     1\n   111111111          11111   111\n  11111 11111        11     1111\n  111111 11 1111 1 111111111\n1111111   11 1 1 1 1111 1\n1111       1111111111111",
         "            1 1 1\n        11111 1 1111\n       1 1 1 1 1 1 111\n      11111111111 1 1 1     11111\n   111 2 2 2 2 211111 11  1111111\n  1 22 2 2 2 2 2 2 211111111111\n 1 W    11111 22 22 2111111 111\n1     111111 2 2  2 2 21111111\n111   11111          111111111\n 1111     11        111 1 11111\n     111111111 1 1111 11 111111\n        1 1111 1 1 1 11   1111111\n         1111111111111       1111",
     ];
-    let mut rng = rand::thread_rng();
-    let dir = rng.gen_range(0..2);
+    let mut rng = rand::rng();
+    let dir = rng.random_range(0..2);
     let speed;
     let x;
     if dir == 0 {
@@ -377,7 +377,7 @@ fn add_big_fish2(_dead: Option<EntityRef>, anim: &mut Animation) {
     let max_h = 9;
     let min_h = anim.height() as i32 - 14;
     let y = if min_h > max_h {
-        max_h + rng.gen_range(0..=(min_h - max_h))
+        max_h + rng.random_range(0..=(min_h - max_h))
     } else {
         max_h
     };
@@ -400,8 +400,8 @@ fn add_big_fish2(_dead: Option<EntityRef>, anim: &mut Animation) {
 /// All parts share the same callback mode so they move together.
 /// The hook point is the physical part that a fish collides with.
 pub fn add_fishhook(_dead: Option<EntityRef>, anim: &mut Animation) {
-    let mut rng = rand::thread_rng();
-    let x = 10 + rng.gen_range(0..(anim.width() as i32 - 30).max(1));
+    let mut rng = rand::rng();
+    let x = 10 + rng.random_range(0..(anim.width() as i32 - 30).max(1));
     let y_start = -20i32;
     let y_line = y_start - 1;
     let line_str: String = "|\n".repeat(50);
@@ -526,8 +526,8 @@ fn group_death(anim: &mut Animation, bound_types: &[&str]) {
 /// Spawns animated ducks on the water surface.
 /// They cycle wing/pose frames while moving sideways.
 pub fn add_ducks(_dead: Option<EntityRef>, anim: &mut Animation) {
-    let mut rng = rand::thread_rng();
-    let dir = rng.gen_range(0..2);
+    let mut rng = rand::rng();
+    let dir = rng.random_range(0..2);
     let shapes: [&[&str]; 2] = [
         &[
             "      _          _          _\n,____(')=  ,____(')=  ,____(')<\n \\~~= ')    \\~~= ')    \\~~= ')",
@@ -595,8 +595,8 @@ fn dolphin_callback(entity: EntityRef, anim: &mut Animation) {
 /// Only the lead dolphin has a death callback to avoid triple respawns.
 /// Followers are visual companions in the same formation.
 pub fn add_dolphins(_dead: Option<EntityRef>, anim: &mut Animation) {
-    let mut rng = rand::thread_rng();
-    let dir = rng.gen_range(0..2);
+    let mut rng = rand::rng();
+    let dir = rng.random_range(0..2);
     let shapes: [[&str; 2]; 2] = [
         [
             "        ,\n      __)\\\n(\\_.-'    a`-.\n(/~~````(/~^^`",
@@ -652,8 +652,8 @@ pub fn add_swan(_dead: Option<EntityRef>, anim: &mut Animation) {
         " ___\n/,_ \\    _,\n|/ )/   / |\n  //  _/  |\n / ( /   _)\n/   `   _/)\n\\  ~=-   /",
     ];
     let colors = ["\n\n         g\n         yy\n\n\n\n", "\n\n g\nyy\n\n\n\n"];
-    let mut rng = rand::thread_rng();
-    let dir = rng.gen_range(0..2);
+    let mut rng = rand::rng();
+    let dir = rng.random_range(0..2);
     let speed;
     let x;
     if dir == 0 {
@@ -693,7 +693,7 @@ pub fn random_object(dead: Option<EntityRef>, anim: &mut Animation) {
         add_ducks,
         add_dolphins,
     ];
-    let i = rand::thread_rng().gen_range(0..choices.len());
+    let i = rand::rng().random_range(0..choices.len());
     choices[i](dead, anim);
 }
 
